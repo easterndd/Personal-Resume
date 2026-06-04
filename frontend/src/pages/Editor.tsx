@@ -1,19 +1,37 @@
-import { useState } from 'react'
-import { Eye, Save, FileDown, Plus, Trash2, GripVertical } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import { Eye, Save, FileDown, Plus, Trash2, GripVertical, Sparkles } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { EditorNav } from '../components/editor/EditorNav'
 import { Field } from '../components/editor/Field'
 import { AiSidePanel } from '../components/ai/AiSidePanel'
+import { AiRewriteModal } from '../components/ai/AiRewriteModal'
+import { ConfirmModal } from '../components/common/ConfirmModal'
 import { ResumeDocument } from '../components/resume/ResumeDocument'
 import { useResumeStore } from '../store/resumeStore'
 import type { ResumeWork, ResumeProject, ResumeEducation, ResumeSkill } from '../types'
+import { mockResumeDataMap } from '../store/resumeStore'
 
 export function Editor() {
   const [activeSection, setActiveSection] = useState('basics')
   const [scale, setScale] = useState(100)
+  const [isSaving, setIsSaving] = useState(false)
+  const [rewriteModalOpen, setRewriteModalOpen] = useState(false)
+  const [rewriteSection, setRewriteSection] = useState('')
+  const [rewriteContent, setRewriteContent] = useState('')
+  const [rewriteItemId, setRewriteItemId] = useState('')
+  const [rewriteField, setRewriteField] = useState('')
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<{ type: string; id: string } | null>(null)
+
+  const { id } = useParams<{ id?: string }>()
 
   const {
     currentResumeData,
+    currentResumeId,
+    setCurrentResumeId,
+    setCurrentResumeData,
+    resumes,
     updateBasics,
     updateTarget,
     updateSummary,
@@ -27,7 +45,70 @@ export function Editor() {
     updateEducation,
     deleteEducation,
     updateSkills,
+    showToast,
   } = useResumeStore()
+
+  useEffect(() => {
+    if (id) {
+      setCurrentResumeId(id)
+      const resumeData = mockResumeDataMap[id]
+      if (resumeData) {
+        setCurrentResumeData(resumeData)
+      }
+    } else {
+      setCurrentResumeId(null)
+    }
+  }, [id, setCurrentResumeId, setCurrentResumeData])
+
+  const currentResume = resumes.find((r) => r.id === currentResumeId)
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    showToast('success', '简历保存成功')
+    setIsSaving(false)
+  }
+
+  const openRewriteModal = (section: string, content: string, itemId: string, field: string) => {
+    setRewriteSection(section)
+    setRewriteContent(content)
+    setRewriteItemId(itemId)
+    setRewriteField(field)
+    setRewriteModalOpen(true)
+  }
+
+  const handleApplyRewrite = (rewrittenContent: string) => {
+    if (rewriteSection === 'work') {
+      updateWork(rewriteItemId, { [rewriteField as keyof ResumeWork]: rewrittenContent })
+    } else if (rewriteSection === 'projects') {
+      updateProject(rewriteItemId, { [rewriteField as keyof ResumeProject]: rewrittenContent })
+    }
+    showToast('success', 'AI 优化已应用')
+  }
+
+  const openDeleteConfirm = (type: string, id: string) => {
+    setPendingDelete({ type, id })
+    setConfirmModalOpen(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (!pendingDelete) return
+    switch (pendingDelete.type) {
+      case 'work':
+        deleteWork(pendingDelete.id)
+        showToast('success', '工作经历已删除')
+        break
+      case 'project':
+        deleteProject(pendingDelete.id)
+        showToast('success', '项目经历已删除')
+        break
+      case 'education':
+        deleteEducation(pendingDelete.id)
+        showToast('success', '教育背景已删除')
+        break
+    }
+    setPendingDelete(null)
+  }
 
   const { work, projects, education, skills } = currentResumeData
 
@@ -197,8 +278,15 @@ export function Editor() {
                     <div className="flex items-center gap-2 mb-3">
                       <GripVertical className="text-slate-400" size={16} />
                       <span className="text-slate-600 text-sm font-medium">工作经历 {work.indexOf(item) + 1}</span>
-                      <button onClick={() => deleteWork(item.id)} className="ml-auto text-red-500 hover:text-red-600">
-                        <Trash2 size={16} />
+                      <button
+                        onClick={() => openRewriteModal('work', item.description, item.id, 'description')}
+                        className="ml-auto p-1.5 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="AI 优化工作描述"
+                      >
+                        <Sparkles size={14} />
+                      </button>
+                      <button onClick={() => openDeleteConfirm('work', item.id)} className="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} />
                       </button>
                     </div>
                     <Field label="公司名称">
@@ -276,8 +364,15 @@ export function Editor() {
                     <div className="flex items-center gap-2 mb-3">
                       <GripVertical className="text-slate-400" size={16} />
                       <span className="text-slate-600 text-sm font-medium">项目 {projects.indexOf(item) + 1}</span>
-                      <button onClick={() => deleteProject(item.id)} className="ml-auto text-red-500 hover:text-red-600">
-                        <Trash2 size={16} />
+                      <button
+                        onClick={() => openRewriteModal('projects', item.description, item.id, 'description')}
+                        className="ml-auto p-1.5 rounded-lg text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="AI 优化项目描述"
+                      >
+                        <Sparkles size={14} />
+                      </button>
+                      <button onClick={() => openDeleteConfirm('project', item.id)} className="p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} />
                       </button>
                     </div>
                     <Field label="项目名称">
@@ -363,8 +458,8 @@ export function Editor() {
                     <div className="flex items-center gap-2 mb-3">
                       <GripVertical className="text-slate-400" size={16} />
                       <span className="text-slate-600 text-sm font-medium">学历 {education.indexOf(item) + 1}</span>
-                      <button onClick={() => deleteEducation(item.id)} className="ml-auto text-red-500 hover:text-red-600">
-                        <Trash2 size={16} />
+                      <button onClick={() => openDeleteConfirm('education', item.id)} className="ml-auto p-1.5 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} />
                       </button>
                     </div>
                     <Field label="学校名称">
@@ -501,17 +596,17 @@ export function Editor() {
     <div className="min-h-screen grid grid-rows-[64px_1fr]">
       <header className="flex items-center justify-between px-6 border-b border-slate-200 bg-white">
         <div>
-          <strong className="text-slate-900 mr-3.5">产品经理简历</strong>
-          <span className="text-slate-400 text-xs">最近保存 14:30</span>
+          <strong className="text-slate-900 mr-3.5">{currentResume?.title || currentResumeData.basics.name || '新建简历'}</strong>
+          <span className="text-slate-400 text-xs">最近保存 {new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div className="flex items-center gap-2.5">
           <Button variant="secondary" size="small">
             <Eye size={16} />
             预览
           </Button>
-          <Button variant="secondary" size="small">
+          <Button variant="secondary" size="small" onClick={handleSave} disabled={isSaving}>
             <Save size={16} />
-            保存
+            {isSaving ? '保存中...' : '保存'}
           </Button>
           <Button variant="primary" size="compact">
             <FileDown size={16} />
@@ -545,6 +640,22 @@ export function Editor() {
 
         <AiSidePanel />
       </div>
+
+      <AiRewriteModal
+        isOpen={rewriteModalOpen}
+        onClose={() => setRewriteModalOpen(false)}
+        section={rewriteSection === 'work' ? '工作描述' : '项目描述'}
+        content={rewriteContent}
+        targetPosition={currentResumeData.target.position}
+        onApply={handleApplyRewrite}
+      />
+
+      <ConfirmModal
+        isOpen={confirmModalOpen}
+        onClose={() => { setConfirmModalOpen(false); setPendingDelete(null) }}
+        onConfirm={handleDeleteConfirm}
+        message="确定要删除这条记录吗？此操作不可撤销。"
+      />
     </div>
   )
 }

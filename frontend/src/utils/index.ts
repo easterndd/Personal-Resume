@@ -37,3 +37,18 @@ export function getStatusColor(status: string): string {
   }
   return map[status] || 'bg-gray-50 text-gray-500'
 }
+
+export function formatResumeDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const parts = dateStr.split('-')
+  if (parts.length >= 2) {
+    return `${parts[0]}.${parts[1].padStart(2, '0')}`
+  }
+  return dateStr
+}
+
+export function formatResumeDateRange(startDate: string, endDate: string): string {
+  const start = formatResumeDate(startDate)
+  const end = endDate ? formatResumeDate(endDate) : '至今'
+  return `${start} - ${end}`
+}

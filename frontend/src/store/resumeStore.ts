@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { ResumeData, ResumeCard, TemplateCard, AiSuggestion, Settings, ResumeWork, ResumeProject, ResumeEducation, ResumeSkill, Job, JobFilter, JobApplication } from '../types'
+import type { ResumeData, ResumeCard, TemplateCard, AiSuggestion, AISettings, AIProvider, ResumeWork, ResumeProject, ResumeEducation, ResumeSkill, Job, JobFilter, JobApplication } from '../types'
 import { generateId } from '../utils'
 
 const defaultResumeData: ResumeData = {
@@ -34,11 +34,339 @@ const defaultResumeData: ResumeData = {
   custom_sections: [],
 }
 
-const defaultSettings: Settings = {
-  provider: 'deepseek',
-  apiKey: '',
-  baseUrl: 'https://api.deepseek.com/v1',
-  model: 'deepseek-chat',
+export const mockResumeDataMap: Record<string, ResumeData> = {
+  '1': {
+    basics: {
+      name: '张三',
+      headline: '高级产品经理',
+      gender: '男',
+      birthDate: '1992-06-15',
+      phone: '13800138000',
+      email: 'zhangsan@example.com',
+      location: '北京市朝阳区',
+      website: '',
+      linkedin: '',
+      github: '',
+    },
+    target: {
+      position: '高级产品经理',
+      industry: '互联网',
+      company_type: '互联网',
+      jd_text: '',
+      keywords: [],
+    },
+    summary: '8年产品经理经验，曾主导多个千万级用户产品从0到1的设计与落地，具备优秀的数据分析能力和跨团队协作经验。',
+    work: [
+      {
+        id: 'w1',
+        company: '字节跳动',
+        position: '高级产品经理',
+        location: '北京',
+        start_date: '2021-03',
+        end_date: '2024-06',
+        description: '负责短视频产品的策略规划与功能迭代',
+        highlights: [
+          '主导短视频推荐算法优化，日活提升20%',
+          '设计用户增长体系，新增用户留存率提升15%',
+          '搭建数据看板体系，支持运营决策',
+        ],
+      },
+      {
+        id: 'w2',
+        company: '美团',
+        position: '产品经理',
+        location: '北京',
+        start_date: '2018-07',
+        end_date: '2021-02',
+        description: '负责外卖业务线产品设计',
+        highlights: [
+          '优化下单流程，转化率提升12%',
+          '设计骑手端调度系统，配送效率提升25%',
+        ],
+      },
+    ],
+    projects: [
+      {
+        id: 'p1',
+        name: '短视频推荐系统',
+        role: '产品负责人',
+        start_date: '2022-01',
+        end_date: '2023-06',
+        description: '从零搭建短视频推荐系统',
+        highlights: ['算法A/B测试体系', '用户画像构建', '实时特征工程'],
+        technologies: ['Python', 'Spark', 'Redis'],
+      },
+    ],
+    education: [
+      {
+        id: 'e1',
+        school: '清华大学',
+        degree: '硕士',
+        major: '计算机科学与技术',
+        start_date: '2015-09',
+        end_date: '2018-06',
+        gpa: '3.7/4.0',
+        highlights: [],
+      },
+      {
+        id: 'e2',
+        school: '北京大学',
+        degree: '本科',
+        major: '软件工程',
+        start_date: '2011-09',
+        end_date: '2015-06',
+        gpa: '3.6/4.0',
+        highlights: [],
+      },
+    ],
+    skills: [
+      { category: '专业技能', items: ['产品设计', '数据分析', '用户增长', '项目管理'] },
+      { category: '技术能力', items: ['SQL', 'Python', 'Tableau', 'Axure'] },
+    ],
+    certificates: [],
+    languages: [],
+    awards: [],
+    custom_sections: [],
+  },
+  '2': {
+    basics: {
+      name: '李四',
+      headline: 'React 前端开发工程师',
+      gender: '男',
+      birthDate: '1995-03-20',
+      phone: '13900139000',
+      email: 'lisi@example.com',
+      location: '杭州市余杭区',
+      website: '',
+      linkedin: '',
+      github: 'https://github.com/lisi',
+    },
+    target: {
+      position: 'React 前端开发工程师',
+      industry: '互联网',
+      company_type: '互联网',
+      jd_text: '',
+      keywords: [],
+    },
+    summary: '5年前端开发经验，精通 React/Vue 技术栈，有大型项目架构设计经验，注重代码质量和性能优化。',
+    work: [
+      {
+        id: 'w1',
+        company: '阿里巴巴',
+        position: '前端开发工程师',
+        location: '杭州',
+        start_date: '2020-05',
+        end_date: '2024-06',
+        description: '负责淘宝前端架构优化',
+        highlights: [
+          '主导微前端架构改造，首屏加载时间减少30%',
+          '搭建组件库，提升团队开发效率50%',
+          '优化Webpack构建配置，构建时间减少40%',
+        ],
+      },
+    ],
+    projects: [],
+    education: [
+      {
+        id: 'e1',
+        school: '浙江大学',
+        degree: '本科',
+        major: '计算机科学与技术',
+        start_date: '2013-09',
+        end_date: '2017-06',
+        gpa: '3.5/4.0',
+        highlights: [],
+      },
+    ],
+    skills: [
+      { category: '前端技术', items: ['React', 'Vue', 'TypeScript', 'Webpack', 'Vite'] },
+      { category: '后端技术', items: ['Node.js', 'Express', 'MongoDB'] },
+      { category: '工具', items: ['Git', 'Docker', 'CI/CD'] },
+    ],
+    certificates: [],
+    languages: [],
+    awards: [],
+    custom_sections: [],
+  },
+  '3': {
+    basics: {
+      name: '王五',
+      headline: '用户运营',
+      gender: '女',
+      birthDate: '1998-08-10',
+      phone: '13700137000',
+      email: 'wangwu@example.com',
+      location: '上海市浦东新区',
+      website: '',
+      linkedin: '',
+      github: '',
+    },
+    target: {
+      position: '用户运营',
+      industry: '互联网',
+      company_type: '互联网',
+      jd_text: '',
+      keywords: [],
+    },
+    summary: '3年用户运营经验，擅长用户增长策略制定和社群运营，有丰富的活动策划经验。',
+    work: [
+      {
+        id: 'w1',
+        company: '小红书',
+        position: '用户运营',
+        location: '上海',
+        start_date: '2022-01',
+        end_date: '2024-06',
+        description: '负责用户增长和社群运营',
+        highlights: [
+          '策划用户拉新活动，新增用户50万+',
+          '运营核心用户社群，活跃度提升30%',
+          '制定用户分层运营策略，留存率提升25%',
+        ],
+      },
+    ],
+    projects: [],
+    education: [
+      {
+        id: 'e1',
+        school: '复旦大学',
+        degree: '本科',
+        major: '市场营销',
+        start_date: '2016-09',
+        end_date: '2020-06',
+        gpa: '3.4/4.0',
+        highlights: [],
+      },
+    ],
+    skills: [
+      { category: '运营技能', items: ['用户增长', '社群运营', '活动策划', '数据分析'] },
+      { category: '工具', items: ['Excel', '飞书', '企业微信', 'Growth Hacking'] },
+    ],
+    certificates: [],
+    languages: [],
+    awards: [],
+    custom_sections: [],
+  },
+  '4': {
+    basics: {
+      name: '赵六',
+      headline: '视觉设计师',
+      gender: '女',
+      birthDate: '1996-11-05',
+      phone: '13600136000',
+      email: 'zhaoliu@example.com',
+      location: '深圳市南山区',
+      website: '',
+      linkedin: '',
+      github: '',
+    },
+    target: {
+      position: '视觉设计师',
+      industry: '互联网',
+      company_type: '互联网',
+      jd_text: '',
+      keywords: [],
+    },
+    summary: '6年视觉设计经验，擅长品牌设计和UI设计，有丰富的电商和社交产品设计经验。',
+    work: [
+      {
+        id: 'w1',
+        company: '腾讯',
+        position: '视觉设计师',
+        location: '深圳',
+        start_date: '2020-03',
+        end_date: '2024-06',
+        description: '负责社交产品视觉设计',
+        highlights: [
+          '设计品牌视觉规范，统一产品视觉风格',
+          '优化界面设计，用户满意度提升20%',
+          '设计营销活动物料，活动转化率提升15%',
+        ],
+      },
+    ],
+    projects: [],
+    education: [
+      {
+        id: 'e1',
+        school: '广州美术学院',
+        degree: '本科',
+        major: '视觉传达设计',
+        start_date: '2014-09',
+        end_date: '2018-06',
+        gpa: '',
+        highlights: [],
+      },
+    ],
+    skills: [
+      { category: '设计软件', items: ['Figma', 'Photoshop', 'Illustrator', 'Sketch'] },
+      { category: '设计能力', items: ['品牌设计', 'UI设计', '插画设计', '动效设计'] },
+    ],
+    certificates: [],
+    languages: [],
+    awards: [],
+    custom_sections: [],
+  },
+}
+
+const defaultProviders: AIProvider[] = [
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    type: 'deepseek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey: '',
+    models: ['deepseek-chat', 'deepseek-r1', 'deepseek-code'],
+    defaultModel: 'deepseek-chat',
+    enabled: true,
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    type: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: '',
+    models: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
+    defaultModel: 'gpt-4o-mini',
+    enabled: true,
+  },
+  {
+    id: 'qwen',
+    name: '通义千问',
+    type: 'qwen',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    models: ['qwen-max', 'qwen-plus', 'qwen-turbo'],
+    defaultModel: 'qwen-plus',
+    enabled: true,
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi',
+    type: 'openai',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    apiKey: '',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    defaultModel: 'moonshot-v1-8k',
+    enabled: true,
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    type: 'anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    apiKey: '',
+    models: ['claude-3-5-sonnet-20250620', 'claude-3-opus-20240229'],
+    defaultModel: 'claude-3-5-sonnet-20250620',
+    enabled: true,
+  },
+]
+
+const defaultAISettings: AISettings = {
+  providers: defaultProviders,
+  activeProviderId: 'deepseek',
+  defaultModel: 'deepseek-chat',
+  temperature: 0.7,
+  maxTokens: 4096,
 }
 
 const mockResumes: ResumeCard[] = [
@@ -206,6 +534,12 @@ const mockJobs: Job[] = [
   },
 ]
 
+interface ToastMessage {
+  id: string
+  type: 'success' | 'error' | 'warning' | 'info'
+  message: string
+}
+
 interface ResumeStore {
   resumes: ResumeCard[]
   currentResumeId: string | null
@@ -213,14 +547,17 @@ interface ResumeStore {
   templates: TemplateCard[]
   currentTemplate: string
   aiSuggestions: AiSuggestion[]
-  settings: Settings
+  aiSettings: AISettings
   saved: boolean
+  toast: ToastMessage | null
 
   jobs: Job[]
   jobFilter: JobFilter
   jobApplications: JobApplication[]
 
   setCurrentResumeId: (id: string | null) => void
+  setToast: (toast: ToastMessage | null) => void
+  showToast: (type: ToastMessage['type'], message: string) => void
   setCurrentResumeData: (data: ResumeData) => void
   updateBasics: (basics: Partial<ResumeData['basics']>) => void
   updateTarget: (target: Partial<ResumeData['target']>) => void
@@ -248,7 +585,11 @@ interface ResumeStore {
   applyAiSuggestion: (id: string) => void
   clearAiSuggestions: () => void
 
-  updateSettings: (settings: Partial<Settings>) => void
+  setActiveProvider: (id: string) => void
+  addProvider: (provider: Omit<AIProvider, 'id'>) => void
+  updateProvider: (id: string, provider: Partial<AIProvider>) => void
+  deleteProvider: (id: string) => void
+  updateAIConfig: (config: Partial<Pick<AISettings, 'temperature' | 'maxTokens' | 'defaultModel'>>) => void
   saveSettings: () => void
   setSaved: (saved: boolean) => void
 
@@ -273,8 +614,9 @@ export const useResumeStore = create<ResumeStore>()(
       templates: mockTemplates,
       currentTemplate: 'modern',
       aiSuggestions: [],
-      settings: defaultSettings,
+      aiSettings: defaultAISettings,
       saved: false,
+      toast: null,
 
       jobs: mockJobs,
       jobFilter: {
@@ -289,6 +631,8 @@ export const useResumeStore = create<ResumeStore>()(
       jobApplications: [],
 
       setCurrentResumeId: (id) => set({ currentResumeId: id }),
+      setToast: (toast) => set({ toast }),
+      showToast: (type, message) => set({ toast: { id: generateId(), type, message } }),
       setCurrentResumeData: (data) => set({ currentResumeData: data }),
       updateBasics: (basics) =>
         set((state) => ({
@@ -406,9 +750,50 @@ export const useResumeStore = create<ResumeStore>()(
         })),
       clearAiSuggestions: () => set({ aiSuggestions: [] }),
 
-      updateSettings: (settings) =>
+      setActiveProvider: (id) =>
+        set((state) => {
+          const provider = state.aiSettings.providers.find((p) => p.id === id)
+          if (!provider) return state
+          return {
+            aiSettings: {
+              ...state.aiSettings,
+              activeProviderId: id,
+              defaultModel: provider.defaultModel,
+            },
+          }
+        }),
+      addProvider: (provider) =>
         set((state) => ({
-          settings: { ...state.settings, ...settings },
+          aiSettings: {
+            ...state.aiSettings,
+            providers: [...state.aiSettings.providers, { ...provider, id: generateId() }],
+          },
+        })),
+      updateProvider: (id, provider) =>
+        set((state) => ({
+          aiSettings: {
+            ...state.aiSettings,
+            providers: state.aiSettings.providers.map((p) => (p.id === id ? { ...p, ...provider } : p)),
+          },
+        })),
+      deleteProvider: (id) =>
+        set((state) => {
+          const newProviders = state.aiSettings.providers.filter((p) => p.id !== id)
+          let newActiveId = state.aiSettings.activeProviderId
+          if (state.aiSettings.activeProviderId === id) {
+            newActiveId = newProviders.length > 0 ? newProviders[0].id : ''
+          }
+          return {
+            aiSettings: {
+              ...state.aiSettings,
+              providers: newProviders,
+              activeProviderId: newActiveId,
+            },
+          }
+        }),
+      updateAIConfig: (config) =>
+        set((state) => ({
+          aiSettings: { ...state.aiSettings, ...config },
         })),
       saveSettings: () => set({ saved: true }),
       setSaved: (saved) => set({ saved }),
@@ -469,7 +854,7 @@ export const useResumeStore = create<ResumeStore>()(
         resumes: state.resumes,
         currentResumeData: state.currentResumeData,
         currentTemplate: state.currentTemplate,
-        settings: state.settings,
+        aiSettings: state.aiSettings,
       }),
     }
   )

@@ -9,23 +9,27 @@ import { ExportRecords } from './pages/ExportRecords'
 import { AiTools } from './pages/AiTools'
 import { SettingsPage } from './pages/SettingsPage'
 import { JobRecommendations } from './pages/JobRecommendations'
+import { Toast } from './components/common/Toast'
 
 function App() {
   return (
-    <Routes>
-      <Route element={<Shell />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/resumes" element={<ResumeManager />} />
-        <Route path="/editor" element={<Editor />} />
-        <Route path="/templates" element={<Templates />} />
-        <Route path="/import" element={<ImportExport />} />
-        <Route path="/exports" element={<ExportRecords />} />
-        <Route path="/ai" element={<AiTools />} />
-        <Route path="/jobs" element={<JobRecommendations />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/resumes" element={<ResumeManager />} />
+          <Route path="/editor/:id?" element={<Editor />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/import" element={<ImportExport />} />
+          <Route path="/exports" element={<ExportRecords />} />
+          <Route path="/ai" element={<AiTools />} />
+          <Route path="/jobs" element={<JobRecommendations />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <Toast />
+    </>
   )
 }
 

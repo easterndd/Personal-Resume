@@ -130,11 +130,28 @@ export interface AiSuggestion {
   applied: boolean
 }
 
-export interface Settings {
-  provider: 'deepseek' | 'openai' | 'qwen' | 'kimi'
-  apiKey: string
+export interface ModelMapping {
+  [key: string]: string
+}
+
+export interface AIProvider {
+  id: string
+  name: string
+  type: 'openai' | 'anthropic' | 'qwen' | 'deepseek' | 'custom'
   baseUrl: string
-  model: string
+  apiKey: string
+  models: string[]
+  defaultModel: string
+  modelMapping?: ModelMapping
+  enabled: boolean
+}
+
+export interface AISettings {
+  providers: AIProvider[]
+  activeProviderId: string
+  defaultModel: string
+  temperature: number
+  maxTokens: number
 }
 
 export interface ExportRecord {

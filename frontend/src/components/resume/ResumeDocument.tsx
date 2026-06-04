@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useResumeStore } from '../../store/resumeStore'
+import { formatResumeDateRange } from '../../utils'
 
 interface DocSectionProps {
   title: string
@@ -64,7 +65,7 @@ export function ResumeDocument() {
       {education.length > 0 && (
         <DocSection title="教育背景">
           {education.map((edu) => (
-            <DocEntry key={edu.id} left={`${edu.start_date} - ${edu.end_date}`} title={edu.school} meta={`${edu.major} · ${edu.degree}`}>
+            <DocEntry key={edu.id} left={formatResumeDateRange(edu.start_date, edu.end_date)} title={edu.school} meta={`${edu.major} · ${edu.degree}`}>
               {edu.highlights.map((highlight, idx) => (
                 <li key={idx} className="text-slate-500 text-xs leading-[1.8]">{highlight}</li>
               ))}
@@ -76,7 +77,7 @@ export function ResumeDocument() {
       {work.length > 0 && (
         <DocSection title="工作经历">
           {work.map((w) => (
-            <DocEntry key={w.id} left={`${w.start_date} - ${w.end_date}`} title={w.company} meta={w.position}>
+            <DocEntry key={w.id} left={formatResumeDateRange(w.start_date, w.end_date)} title={w.company} meta={w.position}>
               {w.highlights.map((highlight, idx) => (
                 <li key={idx} className="text-slate-500 text-xs leading-[1.8]">{highlight}</li>
               ))}
@@ -88,7 +89,7 @@ export function ResumeDocument() {
       {projects.length > 0 && (
         <DocSection title="项目经历">
           {projects.map((p) => (
-            <DocEntry key={p.id} left={`${p.start_date} - ${p.end_date}`} title={p.name} meta={p.role}>
+            <DocEntry key={p.id} left={formatResumeDateRange(p.start_date, p.end_date)} title={p.name} meta={p.role}>
               {p.highlights.map((highlight, idx) => (
                 <li key={idx} className="text-slate-500 text-xs leading-[1.8]">{highlight}</li>
               ))}
