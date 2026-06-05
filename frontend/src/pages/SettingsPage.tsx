@@ -17,7 +17,7 @@ export function SettingsPage() {
 
   const handleSave = () => {
     localStorage.setItem('resume-workshop-ai-settings', JSON.stringify(aiSettings))
-    saved && setSaved(true)
+    setSaved(true)
     setTimeout(() => setSaved(false), 1800)
   }
 
