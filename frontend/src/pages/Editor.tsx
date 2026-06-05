@@ -10,7 +10,7 @@ import { ConfirmModal } from '../components/common/ConfirmModal'
 import { ResumeDocument } from '../components/resume/ResumeDocument'
 import { useResumeStore } from '../store/resumeStore'
 import type { ResumeWork, ResumeProject, ResumeEducation, ResumeSkill } from '../types'
-import { mockResumeDataMap } from '../store/resumeStore'
+import { exportPdf, downloadFile } from '../api/export'
 
 export function Editor() {
   const [activeSection, setActiveSection] = useState('basics')
@@ -23,15 +23,16 @@ export function Editor() {
   const [rewriteField, setRewriteField] = useState('')
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<{ type: string; id: string } | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const { id } = useParams<{ id?: string }>()
 
   const {
     currentResumeData,
     currentResumeId,
-    setCurrentResumeId,
-    setCurrentResumeData,
     resumes,
+    loadResume,
+    saveCurrentResume,
     updateBasics,
     updateTarget,
     updateSummary,
@@ -50,23 +51,40 @@ export function Editor() {
 
   useEffect(() => {
     if (id) {
-      setCurrentResumeId(id)
-      const resumeData = mockResumeDataMap[id]
-      if (resumeData) {
-        setCurrentResumeData(resumeData)
-      }
-    } else {
-      setCurrentResumeId(null)
+      loadResume(id)
     }
-  }, [id, setCurrentResumeId, setCurrentResumeData])
+  }, [id, loadResume])
 
   const currentResume = resumes.find((r) => r.id === currentResumeId)
 
   const handleSave = async () => {
     setIsSaving(true)
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    showToast('success', '简历保存成功')
+    const success = await saveCurrentResume()
+    if (success) {
+      showToast('success', '简历保存成功')
+    } else {
+      showToast('error', '简历保存失败')
+    }
     setIsSaving(false)
+  }
+
+  const handleExport = async () => {
+    if (!currentResumeId) {
+      showToast('warning', '请先保存简历')
+      return
+    }
+    setIsExporting(true)
+    try {
+      const blob = await exportPdf(currentResumeId)
+      const filename = `${currentResumeData.basics.name || 'resume'}_${currentResumeId}.pdf`
+      downloadFile(blob, filename)
+      showToast('success', 'PDF 导出成功')
+    } catch (error) {
+      showToast('error', 'PDF 导出失败')
+      console.error('Export error:', error)
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const openRewriteModal = (section: string, content: string, itemId: string, field: string) => {
@@ -608,9 +626,9 @@ export function Editor() {
             <Save size={16} />
             {isSaving ? '保存中...' : '保存'}
           </Button>
-          <Button variant="primary" size="compact">
+          <Button variant="primary" size="compact" onClick={handleExport} disabled={isExporting}>
             <FileDown size={16} />
-            导出
+            {isExporting ? '导出中...' : '导出'}
           </Button>
         </div>
       </header>

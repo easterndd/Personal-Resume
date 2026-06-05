@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { ResumeData, ResumeCard, TemplateCard, AiSuggestion, AISettings, AIProvider, ResumeWork, ResumeProject, ResumeEducation, ResumeSkill, Job, JobFilter, JobApplication } from '../types'
 import { generateId } from '../utils'
+import { getResumes as apiGetResumes, getResume as apiGetResume, createResume as apiCreateResume, updateResume as apiUpdateResume, deleteResume as apiDeleteResume, duplicateResume as apiDuplicateResume } from '../api/resumes'
 
 const defaultResumeData: ResumeData = {
   basics: {
@@ -32,280 +33,6 @@ const defaultResumeData: ResumeData = {
   languages: [],
   awards: [],
   custom_sections: [],
-}
-
-export const mockResumeDataMap: Record<string, ResumeData> = {
-  '1': {
-    basics: {
-      name: '张三',
-      headline: '高级产品经理',
-      gender: '男',
-      birthDate: '1992-06-15',
-      phone: '13800138000',
-      email: 'zhangsan@example.com',
-      location: '北京市朝阳区',
-      website: '',
-      linkedin: '',
-      github: '',
-    },
-    target: {
-      position: '高级产品经理',
-      industry: '互联网',
-      company_type: '互联网',
-      jd_text: '',
-      keywords: [],
-    },
-    summary: '8年产品经理经验，曾主导多个千万级用户产品从0到1的设计与落地，具备优秀的数据分析能力和跨团队协作经验。',
-    work: [
-      {
-        id: 'w1',
-        company: '字节跳动',
-        position: '高级产品经理',
-        location: '北京',
-        start_date: '2021-03',
-        end_date: '2024-06',
-        description: '负责短视频产品的策略规划与功能迭代',
-        highlights: [
-          '主导短视频推荐算法优化，日活提升20%',
-          '设计用户增长体系，新增用户留存率提升15%',
-          '搭建数据看板体系，支持运营决策',
-        ],
-      },
-      {
-        id: 'w2',
-        company: '美团',
-        position: '产品经理',
-        location: '北京',
-        start_date: '2018-07',
-        end_date: '2021-02',
-        description: '负责外卖业务线产品设计',
-        highlights: [
-          '优化下单流程，转化率提升12%',
-          '设计骑手端调度系统，配送效率提升25%',
-        ],
-      },
-    ],
-    projects: [
-      {
-        id: 'p1',
-        name: '短视频推荐系统',
-        role: '产品负责人',
-        start_date: '2022-01',
-        end_date: '2023-06',
-        description: '从零搭建短视频推荐系统',
-        highlights: ['算法A/B测试体系', '用户画像构建', '实时特征工程'],
-        technologies: ['Python', 'Spark', 'Redis'],
-      },
-    ],
-    education: [
-      {
-        id: 'e1',
-        school: '清华大学',
-        degree: '硕士',
-        major: '计算机科学与技术',
-        start_date: '2015-09',
-        end_date: '2018-06',
-        gpa: '3.7/4.0',
-        highlights: [],
-      },
-      {
-        id: 'e2',
-        school: '北京大学',
-        degree: '本科',
-        major: '软件工程',
-        start_date: '2011-09',
-        end_date: '2015-06',
-        gpa: '3.6/4.0',
-        highlights: [],
-      },
-    ],
-    skills: [
-      { category: '专业技能', items: ['产品设计', '数据分析', '用户增长', '项目管理'] },
-      { category: '技术能力', items: ['SQL', 'Python', 'Tableau', 'Axure'] },
-    ],
-    certificates: [],
-    languages: [],
-    awards: [],
-    custom_sections: [],
-  },
-  '2': {
-    basics: {
-      name: '李四',
-      headline: 'React 前端开发工程师',
-      gender: '男',
-      birthDate: '1995-03-20',
-      phone: '13900139000',
-      email: 'lisi@example.com',
-      location: '杭州市余杭区',
-      website: '',
-      linkedin: '',
-      github: 'https://github.com/lisi',
-    },
-    target: {
-      position: 'React 前端开发工程师',
-      industry: '互联网',
-      company_type: '互联网',
-      jd_text: '',
-      keywords: [],
-    },
-    summary: '5年前端开发经验，精通 React/Vue 技术栈，有大型项目架构设计经验，注重代码质量和性能优化。',
-    work: [
-      {
-        id: 'w1',
-        company: '阿里巴巴',
-        position: '前端开发工程师',
-        location: '杭州',
-        start_date: '2020-05',
-        end_date: '2024-06',
-        description: '负责淘宝前端架构优化',
-        highlights: [
-          '主导微前端架构改造，首屏加载时间减少30%',
-          '搭建组件库，提升团队开发效率50%',
-          '优化Webpack构建配置，构建时间减少40%',
-        ],
-      },
-    ],
-    projects: [],
-    education: [
-      {
-        id: 'e1',
-        school: '浙江大学',
-        degree: '本科',
-        major: '计算机科学与技术',
-        start_date: '2013-09',
-        end_date: '2017-06',
-        gpa: '3.5/4.0',
-        highlights: [],
-      },
-    ],
-    skills: [
-      { category: '前端技术', items: ['React', 'Vue', 'TypeScript', 'Webpack', 'Vite'] },
-      { category: '后端技术', items: ['Node.js', 'Express', 'MongoDB'] },
-      { category: '工具', items: ['Git', 'Docker', 'CI/CD'] },
-    ],
-    certificates: [],
-    languages: [],
-    awards: [],
-    custom_sections: [],
-  },
-  '3': {
-    basics: {
-      name: '王五',
-      headline: '用户运营',
-      gender: '女',
-      birthDate: '1998-08-10',
-      phone: '13700137000',
-      email: 'wangwu@example.com',
-      location: '上海市浦东新区',
-      website: '',
-      linkedin: '',
-      github: '',
-    },
-    target: {
-      position: '用户运营',
-      industry: '互联网',
-      company_type: '互联网',
-      jd_text: '',
-      keywords: [],
-    },
-    summary: '3年用户运营经验，擅长用户增长策略制定和社群运营，有丰富的活动策划经验。',
-    work: [
-      {
-        id: 'w1',
-        company: '小红书',
-        position: '用户运营',
-        location: '上海',
-        start_date: '2022-01',
-        end_date: '2024-06',
-        description: '负责用户增长和社群运营',
-        highlights: [
-          '策划用户拉新活动，新增用户50万+',
-          '运营核心用户社群，活跃度提升30%',
-          '制定用户分层运营策略，留存率提升25%',
-        ],
-      },
-    ],
-    projects: [],
-    education: [
-      {
-        id: 'e1',
-        school: '复旦大学',
-        degree: '本科',
-        major: '市场营销',
-        start_date: '2016-09',
-        end_date: '2020-06',
-        gpa: '3.4/4.0',
-        highlights: [],
-      },
-    ],
-    skills: [
-      { category: '运营技能', items: ['用户增长', '社群运营', '活动策划', '数据分析'] },
-      { category: '工具', items: ['Excel', '飞书', '企业微信', 'Growth Hacking'] },
-    ],
-    certificates: [],
-    languages: [],
-    awards: [],
-    custom_sections: [],
-  },
-  '4': {
-    basics: {
-      name: '赵六',
-      headline: '视觉设计师',
-      gender: '女',
-      birthDate: '1996-11-05',
-      phone: '13600136000',
-      email: 'zhaoliu@example.com',
-      location: '深圳市南山区',
-      website: '',
-      linkedin: '',
-      github: '',
-    },
-    target: {
-      position: '视觉设计师',
-      industry: '互联网',
-      company_type: '互联网',
-      jd_text: '',
-      keywords: [],
-    },
-    summary: '6年视觉设计经验，擅长品牌设计和UI设计，有丰富的电商和社交产品设计经验。',
-    work: [
-      {
-        id: 'w1',
-        company: '腾讯',
-        position: '视觉设计师',
-        location: '深圳',
-        start_date: '2020-03',
-        end_date: '2024-06',
-        description: '负责社交产品视觉设计',
-        highlights: [
-          '设计品牌视觉规范，统一产品视觉风格',
-          '优化界面设计，用户满意度提升20%',
-          '设计营销活动物料，活动转化率提升15%',
-        ],
-      },
-    ],
-    projects: [],
-    education: [
-      {
-        id: 'e1',
-        school: '广州美术学院',
-        degree: '本科',
-        major: '视觉传达设计',
-        start_date: '2014-09',
-        end_date: '2018-06',
-        gpa: '',
-        highlights: [],
-      },
-    ],
-    skills: [
-      { category: '设计软件', items: ['Figma', 'Photoshop', 'Illustrator', 'Sketch'] },
-      { category: '设计能力', items: ['品牌设计', 'UI设计', '插画设计', '动效设计'] },
-    ],
-    certificates: [],
-    languages: [],
-    awards: [],
-    custom_sections: [],
-  },
 }
 
 const defaultProviders: AIProvider[] = [
@@ -368,13 +95,6 @@ const defaultAISettings: AISettings = {
   temperature: 0.7,
   maxTokens: 4096,
 }
-
-const mockResumes: ResumeCard[] = [
-  { id: '1', title: '产品经理简历', role: '高级产品经理', status: 'delivered', time: '今天 14:30', template: 'modern', accent: '#2563eb' },
-  { id: '2', title: '前端工程师简历', role: 'React 前端开发', status: 'draft', time: '昨天 10:20', template: 'classic', accent: '#64748b' },
-  { id: '3', title: '运营专员简历', role: '用户运营', status: 'review', time: '05-15 18:45', template: 'compact', accent: '#0ea5e9' },
-  { id: '4', title: '设计师简历', role: '视觉设计师', status: 'delivered', time: '05-14 09:30', template: 'creative', accent: '#f97316' },
-]
 
 const mockTemplates: TemplateCard[] = [
   { id: 'modern', name: '现代简约', category: '经典商务', accent: '#0f172a' },
@@ -550,10 +270,16 @@ interface ResumeStore {
   aiSettings: AISettings
   saved: boolean
   toast: ToastMessage | null
+  loading: boolean
 
   jobs: Job[]
   jobFilter: JobFilter
   jobApplications: JobApplication[]
+
+  loadResumes: () => Promise<void>
+  loadResume: (id: string) => Promise<void>
+  saveCurrentResume: () => Promise<boolean>
+  createNewResume: (title: string) => Promise<string>
 
   setCurrentResumeId: (id: string | null) => void
   setToast: (toast: ToastMessage | null) => void
@@ -595,8 +321,8 @@ interface ResumeStore {
 
   addResume: (resume: Omit<ResumeCard, 'id'>) => void
   updateResumeStatus: (id: string, status: ResumeCard['status']) => void
-  deleteResume: (id: string) => void
-  duplicateResume: (id: string) => void
+  deleteResume: (id: string) => Promise<void>
+  duplicateResume: (id: string) => Promise<void>
 
   setJobFilter: (filter: Partial<JobFilter>) => void
   resetJobFilter: () => void
@@ -605,10 +331,22 @@ interface ResumeStore {
   deleteApplication: (id: string) => void
 }
 
+function convertApiToCard(apiResume: any): ResumeCard {
+  return {
+    id: apiResume.id,
+    title: apiResume.title,
+    role: apiResume.target_position || '',
+    status: apiResume.status as ResumeCard['status'],
+    time: new Date(apiResume.updated_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+    template: apiResume.template_id || 'modern',
+    accent: '#2563eb',
+  }
+}
+
 export const useResumeStore = create<ResumeStore>()(
   persist(
-    (set) => ({
-      resumes: mockResumes,
+    (set, get) => ({
+      resumes: [],
       currentResumeId: null,
       currentResumeData: defaultResumeData,
       templates: mockTemplates,
@@ -617,6 +355,7 @@ export const useResumeStore = create<ResumeStore>()(
       aiSettings: defaultAISettings,
       saved: false,
       toast: null,
+      loading: false,
 
       jobs: mockJobs,
       jobFilter: {
@@ -629,6 +368,87 @@ export const useResumeStore = create<ResumeStore>()(
         matchScoreMin: 0,
       },
       jobApplications: [],
+
+      loadResumes: async () => {
+        set({ loading: true })
+        try {
+          const apiResumes = await apiGetResumes()
+          const cards = apiResumes.map(convertApiToCard)
+          set({ resumes: cards })
+        } catch (error) {
+          console.error('Failed to load resumes:', error)
+        } finally {
+          set({ loading: false })
+        }
+      },
+
+      loadResume: async (id) => {
+        set({ loading: true })
+        try {
+          const apiResume = await apiGetResume(id)
+          set({
+            currentResumeId: id,
+            currentResumeData: apiResume.resume_data as ResumeData,
+            currentTemplate: apiResume.template_id,
+          })
+        } catch (error) {
+          console.error('Failed to load resume:', error)
+        } finally {
+          set({ loading: false })
+        }
+      },
+
+      saveCurrentResume: async () => {
+        const { currentResumeId, currentResumeData, currentTemplate } = get()
+        set({ loading: true })
+        try {
+          const resumeData = { ...currentResumeData }
+          const targetPosition = currentResumeData.target.position || ''
+          const targetIndustry = currentResumeData.target.industry || ''
+
+          if (currentResumeId) {
+            await apiUpdateResume(currentResumeId, {
+              resume_data: resumeData,
+              template_id: currentTemplate,
+              target_position: targetPosition,
+              target_industry: targetIndustry,
+            })
+          } else {
+            const title = currentResumeData.basics.name ? `${currentResumeData.basics.name}的简历` : '新建简历'
+            const result = await apiCreateResume({
+              title,
+              resume_data: resumeData,
+              target_position: targetPosition,
+              target_industry: targetIndustry,
+            })
+            set({ currentResumeId: result.id })
+          }
+          await get().loadResumes()
+          return true
+        } catch (error) {
+          console.error('Failed to save resume:', error)
+          return false
+        } finally {
+          set({ loading: false })
+        }
+      },
+
+      createNewResume: async (title) => {
+        set({ loading: true })
+        try {
+          const result = await apiCreateResume({
+            title,
+            resume_data: defaultResumeData,
+          })
+          await get().loadResumes()
+          return result.id
+        } catch (error) {
+          console.error('Failed to create resume:', error)
+          return generateId()
+        } finally {
+          set({ loading: false })
+        }
+      },
 
       setCurrentResumeId: (id) => set({ currentResumeId: id }),
       setToast: (toast) => set({ toast }),
@@ -806,18 +626,25 @@ export const useResumeStore = create<ResumeStore>()(
         set((state) => ({
           resumes: state.resumes.map((r) => (r.id === id ? { ...r, status } : r)),
         })),
-      deleteResume: (id) =>
-        set((state) => ({
-          resumes: state.resumes.filter((r) => r.id !== id),
-        })),
-      duplicateResume: (id) =>
-        set((state) => {
-          const resume = state.resumes.find((r) => r.id === id)
-          if (!resume) return state
-          return {
-            resumes: [{ ...resume, id: generateId(), title: `${resume.title} (复制)`, time: '刚刚' }, ...state.resumes],
-          }
-        }),
+      deleteResume: async (id) => {
+        try {
+          await apiDeleteResume(id)
+          set((state) => ({
+            resumes: state.resumes.filter((r) => r.id !== id),
+            currentResumeId: state.currentResumeId === id ? null : state.currentResumeId,
+          }))
+        } catch (error) {
+          console.error('Failed to delete resume:', error)
+        }
+      },
+      duplicateResume: async (id) => {
+        try {
+          await apiDuplicateResume(id)
+          await get().loadResumes()
+        } catch (error) {
+          console.error('Failed to duplicate resume:', error)
+        }
+      },
 
       setJobFilter: (filter) =>
         set((state) => ({
@@ -851,9 +678,6 @@ export const useResumeStore = create<ResumeStore>()(
     {
       name: 'resume-workshop-storage',
       partialize: (state) => ({
-        resumes: state.resumes,
-        currentResumeData: state.currentResumeData,
-        currentTemplate: state.currentTemplate,
         aiSettings: state.aiSettings,
       }),
     }

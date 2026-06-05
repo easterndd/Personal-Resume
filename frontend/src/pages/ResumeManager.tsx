@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Filter } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '../components/common/Button'
@@ -19,9 +19,13 @@ const statusMap: Record<string, string> = {
 }
 
 export function ResumeManager() {
-  const { resumes } = useResumeStore()
+  const { resumes, loadResumes } = useResumeStore()
   const [searchKeyword, setSearchKeyword] = useState('')
   const [activeStatus, setActiveStatus] = useState('全部')
+
+  useEffect(() => {
+    loadResumes()
+  }, [loadResumes])
 
   const filteredResumes = resumes.filter((resume) => {
     const matchesSearch =

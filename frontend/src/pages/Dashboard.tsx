@@ -1,10 +1,16 @@
+import { useEffect } from 'react'
 import { Plus, Upload, FileText, Sparkles, ChevronRight } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { ResumeCardItem } from '../components/resume/ResumeCardItem'
 import { useResumeStore } from '../store/resumeStore'
 
 export function Dashboard() {
-  const { resumes } = useResumeStore()
+  const { resumes, loadResumes } = useResumeStore()
+
+  useEffect(() => {
+    loadResumes()
+  }, [loadResumes])
+
   const recentResumes = resumes.slice(0, 4)
 
   return (
