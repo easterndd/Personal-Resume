@@ -11,6 +11,7 @@
     python tool/push_to_github.py -c <url>     # 克隆指定仓库
     python tool/push_to_github.py --pull       # 仅拉取远程更新
     python tool/push_to_github.py --setup-remote <url>  # 设置远程仓库
+    python tool/push_to_github.py --sync       # 同步模式（先拉取后推送）
 """
 
 import os
@@ -20,9 +21,10 @@ import sys
 from datetime import datetime
 
 
-def run_command(cmd, cwd=None, dry_run=False):
+def run_command(cmd, cwd=None, dry_run=False, show_output=True):
     """运行命令"""
-    print(f"执行命令: {' '.join(cmd)}")
+    if show_output:
+        print(f"执行命令: {' '.join(cmd)}")
     if dry_run:
         return '', '', 0
     try:
@@ -36,7 +38,7 @@ def run_command(cmd, cwd=None, dry_run=False):
 
 def get_git_status():
     """获取 Git 状态（porcelain 格式）"""
-    stdout, stderr, code = run_command(['git', 'status', '--porcelain'])
+    stdout, stderr, code = run_command(['git', 'status', '--porcelain'], show_output=False)
     if code != 0:
         print(f"获取状态失败: {stderr}")
         return None
@@ -51,16 +53,19 @@ def has_uncommitted_changes():
 
 def has_unpushed_commits(branch='main'):
     """检查是否有未推送的提交"""
-    stdout, stderr, code = run_command(['git', 'rev-list', '--count', f'origin/{branch}..{branch}'])
+    stdout, stderr, code = run_command(['git', 'rev-list', '--count', f'origin/{branch}..{branch}'], show_output=False)
     if code != 0:
         return True
-    count = int(stdout.strip())
-    return count > 0
+    try:
+        count = int(stdout.strip())
+        return count > 0
+    except:
+        return False
 
 
 def has_remote_branch(branch='main'):
     """检查远程分支是否存在"""
-    stdout, stderr, code = run_command(['git', 'ls-remote', '--heads', 'origin', branch])
+    stdout, stderr, code = run_command(['git', 'ls-remote', '--heads', 'origin', branch], show_output=False)
     if code != 0:
         return False
     return len(stdout.strip()) > 0
@@ -68,21 +73,37 @@ def has_remote_branch(branch='main'):
 
 def has_initial_commit():
     """检查是否已有初始提交"""
-    stdout, stderr, code = run_command(['git', 'rev-parse', '--verify', 'HEAD'])
+    stdout, stderr, code = run_command(['git', 'rev-parse', '--verify', 'HEAD'], show_output=False)
     return code == 0
 
 
 def get_current_branch():
     """获取当前分支名称"""
-    stdout, stderr, code = run_command(['git', 'branch', '--show-current'])
+    stdout, stderr, code = run_command(['git', 'branch', '--show-current'], show_output=False)
     if code != 0:
         return 'main'
     return stdout.strip() or 'main'
 
 
+def get_local_commit_hash(branch='main'):
+    """获取本地分支的最新提交 hash"""
+    stdout, stderr, code = run_command(['git', 'rev-parse', branch], show_output=False)
+    if code != 0:
+        return None
+    return stdout.strip()
+
+
+def get_remote_commit_hash(branch='main'):
+    """获取远程分支的最新提交 hash"""
+    stdout, stderr, code = run_command(['git', 'rev-parse', f'origin/{branch}'], show_output=False)
+    if code != 0:
+        return None
+    return stdout.strip()
+
+
 def generate_commit_message():
     """自动生成提交信息"""
-    stdout, stderr, code = run_command(['git', 'diff', '--stat'])
+    stdout, stderr, code = run_command(['git', 'diff', '--stat'], show_output=False)
     if code != 0:
         return "更新代码"
 
@@ -126,7 +147,7 @@ def setup_remote(repo_url, dry_run=False):
     """设置远程仓库"""
     print("\n=== 设置远程仓库 ===")
     
-    stdout, stderr, code = run_command(['git', 'remote', 'remove', 'origin'], dry_run=dry_run)
+    stdout, stderr, code = run_command(['git', 'remote', 'remove', 'origin'], dry_run=dry_run, show_output=False)
     if code != 0 and not dry_run and "not found" not in stderr:
         print(f"移除旧远程失败: {stderr}")
     
@@ -141,7 +162,7 @@ def setup_remote(repo_url, dry_run=False):
 def stash_changes(dry_run=False):
     """暂存未提交的更改"""
     print("\n=== 暂存工作区更改 ===")
-    stdout, stderr, code = run_command(['git', 'stash'], dry_run=dry_run)
+    stdout, stderr, code = run_command(['git', 'stash', 'push', '-m', 'auto-stash-before-pull'], dry_run=dry_run)
     if code != 0 and not dry_run:
         print(f"暂存失败: {stderr}")
         return False
@@ -155,36 +176,94 @@ def unstash_changes(dry_run=False):
     stdout, stderr, code = run_command(['git', 'stash', 'pop'], dry_run=dry_run)
     if code != 0 and not dry_run:
         print(f"恢复失败: {stderr}")
+        print("提示: 可能有冲突，请手动解决后运行 'git stash drop'")
         return False
     print("工作区已恢复")
     return True
+
+
+def fetch_remote(branch='main', dry_run=False, retry=3):
+    """拉取远程信息（带重试）"""
+    print(f"\n=== 获取远程更新 (分支: {branch}) ===")
+    
+    for attempt in range(retry):
+        if attempt > 0:
+            print(f"重试第 {attempt + 1} 次...")
+        
+        stdout, stderr, code = run_command(['git', 'fetch', 'origin', branch], dry_run=dry_run)
+        if code != 0 and not dry_run:
+            print(f"获取失败: {stderr}")
+            if attempt < retry - 1:
+                import time
+                time.sleep(2)
+                continue
+            return False
+        
+        if not dry_run:
+            # 更新远程跟踪分支信息
+            run_command(['git', 'remote', 'update', 'origin', '--prune'], show_output=False)
+        
+        print("获取成功")
+        return True
+    
+    return False
+
+
+def check_remote_updates(branch='main'):
+    """检查远程是否有更新（返回更新的提交数量）"""
+    local_hash = get_local_commit_hash(branch)
+    remote_hash = get_remote_commit_hash(branch)
+    
+    if not local_hash or not remote_hash:
+        return 0, "无法获取提交信息"
+    
+    if local_hash == remote_hash:
+        return 0, "本地与远程一致"
+    
+    # 检查远程是否有本地没有的提交
+    stdout, stderr, code = run_command(
+        ['git', 'rev-list', '--count', f'{local_hash}..{remote_hash}'],
+        show_output=False
+    )
+    
+    if code != 0:
+        return 0, "无法比较提交"
+    
+    try:
+        count = int(stdout.strip())
+        if count > 0:
+            return count, f"远程领先 {count} 个提交"
+        return 0, "本地与远程一致"
+    except:
+        return 0, "无法解析提交数量"
 
 
 def pull_with_rebase(branch='main', dry_run=False):
     """拉取远程并合并（优先 rebase）"""
     print(f"\n=== 拉取远程更新 (分支: {branch}) ===")
     
-    has_conflicts = False
+    # 先 fetch 确保远程信息是最新的
+    if not fetch_remote(branch, dry_run):
+        return False
     
+    # 检查是否有更新
+    update_count, update_msg = check_remote_updates(branch)
+    print(f"更新状态: {update_msg}")
+    
+    if update_count == 0:
+        print("没有需要拉取的更新")
+        return True
+    
+    # 尝试 rebase
     stdout, stderr, code = run_command(['git', 'pull', '--rebase', 'origin', branch], dry_run=dry_run)
     if code != 0 and not dry_run:
         print(f"Rebase 失败: {stderr}")
         
-        if "CONFLICT" in stderr:
-            print("检测到冲突，尝试 stash 后再 rebase...")
-            if not stash_changes(dry_run):
-                print("暂存失败，尝试普通 merge...")
-                return try_merge_pull(branch, dry_run)
-            
-            stdout, stderr, code = run_command(['git', 'pull', '--rebase', 'origin', branch], dry_run=dry_run)
-            if code != 0 and not dry_run:
-                print(f"Stash 后 rebase 仍失败: {stderr}")
-                unstash_changes(dry_run)
-                return try_merge_pull(branch, dry_run)
-            
-            if unstash_changes(dry_run):
-                print("Rebase 成功，工作区已恢复")
-                return True
+        if "CONFLICT" in stderr or "conflict" in stderr.lower():
+            print("\n检测到冲突！")
+            print("请手动解决冲突后运行:")
+            print("  git rebase --continue  # 继续完成 rebase")
+            print("  或 git rebase --abort  # 放弃 rebase")
             return False
         
         print("尝试使用合并方式拉取...")
@@ -199,7 +278,7 @@ def try_merge_pull(branch='main', dry_run=False):
     stdout, stderr, code = run_command(['git', 'pull', '--allow-unrelated-histories', 'origin', branch], dry_run=dry_run)
     if code != 0 and not dry_run:
         print(f"合并拉取失败: {stderr}")
-        if "CONFLICT" in stderr:
+        if "CONFLICT" in stderr or "conflict" in stderr.lower():
             print("错误：合并时发生冲突，请手动解决冲突后重试")
         else:
             print("错误：无法同步远程仓库，请手动处理")
@@ -208,59 +287,33 @@ def try_merge_pull(branch='main', dry_run=False):
     return True
 
 
-def fetch_remote(branch='main', dry_run=False):
-    """仅拉取远程信息"""
-    print(f"\n=== 获取远程更新 (分支: {branch}) ===")
-    stdout, stderr, code = run_command(['git', 'fetch', 'origin', branch], dry_run=dry_run)
-    if code != 0 and not dry_run:
-        print(f"获取失败: {stderr}")
-        return False
-    print("获取成功")
-    return True
-
-
-def check_for_updates(branch='main'):
-    """检查是否有远程更新"""
-    fetch_remote(branch)
-    stdout, stderr, code = run_command(['git', 'rev-list', '--count', f'{branch}..origin/{branch}'])
-    if code != 0:
-        return 0
-    return int(stdout.strip())
-
-
 def show_conflicts():
     """显示冲突文件"""
-    stdout, stderr, code = run_command(['git', 'diff', '--name-only', '--diff-filter=U'])
+    stdout, stderr, code = run_command(['git', 'diff', '--name-only', '--diff-filter=U'], show_output=False)
     if code != 0:
         return []
     files = stdout.strip().split('\n')
     return [f for f in files if f]
 
 
-def resolve_conflicts_interactive():
-    """交互式解决冲突"""
-    conflicts = show_conflicts()
-    if not conflicts:
-        return True
+def show_commit_diff(branch='main'):
+    """显示本地和远程的提交差异"""
+    local_hash = get_local_commit_hash(branch)
+    remote_hash = get_remote_commit_hash(branch)
     
-    print("\n=== 检测到冲突 ===")
-    print("冲突文件:")
-    for i, f in enumerate(conflicts, 1):
-        print(f"{i}. {f}")
+    if not local_hash or not remote_hash:
+        return
     
-    print("\n请手动解决冲突后按 Enter 继续...")
-    input()
+    if local_hash == remote_hash:
+        return
     
-    print("\n=== 检查冲突是否已解决 ===")
-    conflicts = show_conflicts()
-    if conflicts:
-        print("仍有冲突未解决:")
-        for f in conflicts:
-            print(f"- {f}")
-        return False
-    
-    print("所有冲突已解决")
-    return True
+    print("\n=== 远程新提交 ===")
+    stdout, stderr, code = run_command(
+        ['git', 'log', '--oneline', f'{local_hash}..{remote_hash}'],
+        show_output=False
+    )
+    if code == 0 and stdout.strip():
+        print(stdout.strip())
 
 
 def main():
@@ -274,9 +327,12 @@ def main():
     parser.add_argument('--setup-remote', help='设置远程仓库 URL')
     parser.add_argument('--fetch', action='store_true', help='仅获取远程信息')
     parser.add_argument('--check-updates', action='store_true', help='检查是否有远程更新')
+    parser.add_argument('--sync', action='store_true', help='同步模式（先拉取后推送）')
     args = parser.parse_args()
 
-    print(f"\n=== Git 操作脚本 ===")
+    print(f"\n{'='*50}")
+    print(f"Git 操作脚本")
+    print(f"{'='*50}")
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     if args.clone:
@@ -304,64 +360,107 @@ def main():
             print("远程仓库设置完成")
         sys.exit(0)
 
+    # 获取当前分支
+    current_branch = get_current_branch()
+    target_branch = args.branch if args.branch != 'main' else current_branch
+    print(f"当前分支: {current_branch}")
+    print(f"目标分支: {target_branch}")
+
+    # 先 fetch 获取最新远程信息
+    print("\n=== 获取远程信息 ===")
+    fetch_remote(target_branch, args.dry_run)
+
     if args.fetch:
-        if fetch_remote(args.branch, args.dry_run):
-            print("获取完成")
+        print("获取完成")
         sys.exit(0)
 
+    # 检查远程更新
+    update_count, update_msg = check_remote_updates(target_branch)
+    
     if args.check_updates:
-        count = check_for_updates(args.branch)
-        if count > 0:
-            print(f"检测到 {count} 个远程更新")
-        else:
-            print("本地已是最新")
+        print(f"\n更新状态: {update_msg}")
+        if update_count > 0:
+            show_commit_diff(target_branch)
         sys.exit(0)
-
-    print(f"目标分支: {args.branch}")
 
     has_changes = has_uncommitted_changes()
-    has_pushed = has_unpushed_commits(args.branch)
-    has_remote = has_remote_branch(args.branch)
+    has_pushed = has_unpushed_commits(target_branch)
+    has_remote = has_remote_branch(target_branch)
     has_commit = has_initial_commit()
 
-    if args.pull:
-        if has_changes:
-            print("\n警告：工作区有未提交的更改")
-            if not args.dry_run:
-                confirm = input("是否暂存更改后拉取? (y/N): ")
-                if confirm.lower() == 'y':
-                    stash_changes(args.dry_run)
-                    pull_with_rebase(args.branch, args.dry_run)
-                    unstash_changes(args.dry_run)
-                    print("拉取完成")
-                else:
-                    print("取消拉取")
-        else:
-            pull_with_rebase(args.branch, args.dry_run)
-            print("拉取完成")
-        sys.exit(0)
+    # 显示当前状态
+    print(f"\n=== 当前状态 ===")
+    print(f"工作区更改: {'有' if has_changes else '无'}")
+    print(f"未推送提交: {'有' if has_pushed else '无'}")
+    print(f"远程更新: {update_msg}")
 
-    if not has_changes and not has_pushed:
-        print("\n=== 状态检查 ===")
-        print("没有需要提交的修改，也没有未推送的提交")
+    if args.pull or args.sync:
+        print(f"\n{'='*50}")
+        print("拉取模式")
+        print(f"{'='*50}")
         
-        if has_remote:
-            remote_count = check_for_updates(args.branch)
-            if remote_count > 0:
-                print(f"远程有 {remote_count} 个更新可用")
+        if update_count == 0:
+            print("没有需要拉取的更新")
+        else:
+            show_commit_diff(target_branch)
+            
+            if has_changes:
+                print("\n警告：工作区有未提交的更改")
                 if not args.dry_run:
-                    confirm = input("是否拉取远程更新? (y/N): ")
+                    confirm = input("是否暂存更改后拉取? (y/N): ")
                     if confirm.lower() == 'y':
-                        pull_with_rebase(args.branch, args.dry_run)
-                        print("拉取完成")
+                        if not stash_changes(args.dry_run):
+                            sys.exit(1)
+                        if not pull_with_rebase(target_branch, args.dry_run):
+                            unstash_changes(args.dry_run)
+                            sys.exit(1)
+                        unstash_changes(args.dry_run)
                     else:
-                        print("保持当前状态")
-        else:
-            print("项目已与远程同步")
+                        print("取消拉取")
+                        sys.exit(0)
+                else:
+                    print("[预览] 将暂存更改后拉取")
+            else:
+                if not pull_with_rebase(target_branch, args.dry_run):
+                    sys.exit(1)
         
+        if args.pull:
+            print("\n拉取完成")
+            sys.exit(0)
+
+    if not has_changes and not has_pushed and update_count == 0:
+        print("\n项目已与远程同步，无需操作")
         sys.exit(0)
 
-    print("\n=== Git 状态 ===")
+    # 显示远程更新信息
+    if update_count > 0:
+        print(f"\n{'='*50}")
+        print(f"警告: 远程有 {update_count} 个新提交!")
+        print(f"{'='*50}")
+        show_commit_diff(target_branch)
+        
+        if not args.dry_run:
+            confirm = input("\n是否先拉取远程更新? (y/N): ")
+            if confirm.lower() == 'y':
+                if has_changes:
+                    if not stash_changes(args.dry_run):
+                        sys.exit(1)
+                
+                if not pull_with_rebase(target_branch, args.dry_run):
+                    if has_changes:
+                        unstash_changes(args.dry_run)
+                    sys.exit(1)
+                
+                if has_changes:
+                    unstash_changes(args.dry_run)
+                    has_changes = True
+                
+                # 重新检查状态
+                update_count, _ = check_remote_updates(target_branch)
+
+    print(f"\n{'='*50}")
+    print("Git 状态")
+    print(f"{'='*50}")
     stdout, _, _ = run_command(['git', 'status'])
     print(stdout)
 
@@ -374,26 +473,6 @@ def main():
 
     print(f"\n=== 提交信息 ===")
     print(commit_msg)
-
-    if has_remote:
-        remote_count = check_for_updates(args.branch)
-        if remote_count > 0:
-            print(f"\n=== 检测到远程更新 ===")
-            print(f"远程有 {remote_count} 个新提交")
-            if not args.dry_run:
-                confirm = input("是否先拉取远程更新? (y/N): ")
-                if confirm.lower() == 'y':
-                    if has_changes:
-                        stash_changes(args.dry_run)
-                    
-                    if not pull_with_rebase(args.branch, args.dry_run):
-                        if has_changes:
-                            unstash_changes(args.dry_run)
-                        sys.exit(1)
-                    
-                    if has_changes:
-                        unstash_changes(args.dry_run)
-                        has_changes = True
 
     if not args.dry_run:
         confirm = input("\n确认推送? (y/N): ")
@@ -416,19 +495,22 @@ def main():
             sys.exit(1)
         print("提交成功")
 
+    # 再次检查远程更新
     if has_remote and has_commit and not args.force:
-        print("\n=== 再次检查远程更新 ===")
-        remote_count = check_for_updates(args.branch)
-        if remote_count > 0:
-            print(f"远程有 {remote_count} 个新提交")
+        fetch_remote(target_branch, args.dry_run)
+        update_count, _ = check_remote_updates(target_branch)
+        if update_count > 0:
+            print(f"\n警告: 远程有 {update_count} 个新提交")
             if not args.dry_run:
                 confirm = input("是否先拉取远程更新? (y/N): ")
                 if confirm.lower() == 'y':
-                    if not pull_with_rebase(args.branch, args.dry_run):
+                    if not pull_with_rebase(target_branch, args.dry_run):
                         sys.exit(1)
 
-    print("\n=== 推送到 GitHub ===")
-    push_cmd = ['git', 'push', 'origin', args.branch]
+    print(f"\n{'='*50}")
+    print("推送到 GitHub")
+    print(f"{'='*50}")
+    push_cmd = ['git', 'push', 'origin', target_branch]
     if args.force:
         push_cmd.append('--force')
     if not has_commit:
@@ -443,7 +525,7 @@ def main():
             if not args.dry_run:
                 confirm = input("是否自动拉取并重试? (y/N): ")
                 if confirm.lower() == 'y':
-                    if pull_with_rebase(args.branch, args.dry_run):
+                    if pull_with_rebase(target_branch, args.dry_run):
                         print("\n重新推送...")
                         stdout, stderr, code = run_command(push_cmd, dry_run=args.dry_run)
                         if code != 0 and not args.dry_run:
@@ -456,11 +538,13 @@ def main():
         else:
             sys.exit(1)
 
-    print("推送成功!")
+    print("\n推送成功!")
 
-    print(f"\n=== 完成 ===")
+    print(f"\n{'='*50}")
+    print("完成")
+    print(f"{'='*50}")
     print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"分支: {args.branch}")
+    print(f"分支: {target_branch}")
     print("项目已成功推送到 GitHub!")
 
 
