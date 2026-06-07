@@ -51,8 +51,16 @@ export function ResumeDocument() {
             {basics.phone} · {basics.email} · {basics.location}
           </p>
         </div>
-        <div className="flex-shrink-0 w-[70px] h-[82px] flex items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-bold text-lg">
-          {basics.name?.charAt(0) || '张'}
+        <div className="flex-shrink-0 w-[70px] h-[82px] flex items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-bold text-lg overflow-hidden">
+          {basics.avatar ? (
+            <img 
+              src={basics.avatar} 
+              alt="avatar" 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            basics.name?.charAt(0) || '张'
+          )}
         </div>
       </header>
 

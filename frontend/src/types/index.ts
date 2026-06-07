@@ -11,6 +11,7 @@ export interface ResumeBasics {
   website: string
   linkedin: string
   github: string
+  avatar?: string
 }
 
 export interface ResumeTarget {

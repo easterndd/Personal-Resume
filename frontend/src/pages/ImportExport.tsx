@@ -1,31 +1,61 @@
+import { useState } from 'react'
 import { FileType, FileText, FileJson, FileDown } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { PageTop } from '../components/layout/PageTop'
+import { ImportPanel } from '../components/import'
+import { useResumeStore } from '../store/resumeStore'
 
 interface ImportExportProps {
   embedded?: boolean
 }
 
 export function ImportExport({ embedded = false }: ImportExportProps) {
+  const [showImport, setShowImport] = useState(false)
+  const { setCurrentResumeData, setCurrentResumeId } = useResumeStore()
+
+  const handleImportComplete = (data: any) => {
+    setShowImport(false)
+    setCurrentResumeData(data)
+    setCurrentResumeId(null) // 新简历
+  }
+
   return (
     <div className={`${embedded ? 'border border-slate-200 rounded-lg bg-white/94 shadow-[0_18px_50px_rgba(15,23,42,0.04)] p-[26px]' : 'p-[34px_38px]'} space-y-[22px]`}>
       {!embedded ? (
-        <PageTop title="导入导出" desc="支持 PDF / DOCX / TXT / JSON，本地 mock 版本先展示完整流程" />
+        <PageTop title="导入导出" desc="支持 PDF / DOCX / TXT / JSON，智能解析生成结构化简历" />
       ) : null}
 
       <section className="border border-slate-200 rounded-lg bg-white/94 shadow-[0_18px_50px_rgba(15,23,42,0.04)] p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-2">导入简历</h2>
-        <p className="text-slate-500 text-sm">支持多种格式导入，快速生成简历</p>
-        <div className="min-h-[230px] flex flex-col items-center justify-center gap-3 mt-5.5 border border-slate-200 rounded-lg bg-blue-50/50 text-center">
-          <div className="flex gap-[18px] mb-3">
-            <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-red-500">PDF</span>
-            <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-blue-600">DOCX</span>
-            <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-slate-400">TXT</span>
-            <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-emerald-500">JSON</span>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">导入简历</h2>
+            <p className="text-slate-500 text-sm">AI智能解析，一键生成结构化简历</p>
           </div>
-          <strong className="text-slate-900">点击或拖拽文件到此处上传</strong>
-          <p className="text-slate-500 text-sm">支持 PDF / DOCX / TXT / JSON 格式，文件大小不超过 10MB</p>
+          {!showImport && (
+            <Button variant="secondary" size="small" onClick={() => setShowImport(true)}>
+              导入新简历
+            </Button>
+          )}
         </div>
+
+        {showImport ? (
+          <div className="min-h-[400px]">
+            <ImportPanel onComplete={handleImportComplete} />
+          </div>
+        ) : (
+          <div className="min-h-[180px] flex flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 rounded-lg bg-blue-50/50 text-center cursor-pointer hover:border-blue-400 transition-colors"
+               onClick={() => setShowImport(true)}>
+            <div className="flex gap-[18px] mb-3">
+              <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-red-500">PDF</span>
+              <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-blue-600">DOCX</span>
+              <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-slate-400">TXT</span>
+              <span className="w-[42px] h-[50px] flex items-center justify-center rounded-lg text-white text-xs font-bold bg-emerald-500">JSON</span>
+            </div>
+            <strong className="text-slate-900">点击或拖拽文件到此处上传</strong>
+            <p className="text-slate-500 text-sm">支持 PDF / DOCX / TXT / JSON 格式，文件大小不超过 10MB</p>
+            <p className="text-blue-600 text-sm font-medium mt-2">AI智能解析 → 自动生成结构化简历</p>
+          </div>
+        )}
       </section>
 
       <section className="border border-slate-200 rounded-lg bg-white/94 shadow-[0_18px_50px_rgba(15,23,42,0.04)] p-6">

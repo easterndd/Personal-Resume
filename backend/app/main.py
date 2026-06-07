@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import resumes, ai, export
+from .routers import resumes, ai, export, import_
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +19,7 @@ app.add_middleware(
 app.include_router(resumes.router)
 app.include_router(ai.router)
 app.include_router(export.router)
+app.include_router(import_.router)
 
 
 @app.get("/")

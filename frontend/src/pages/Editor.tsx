@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Eye, Save, FileDown, Plus, Trash2, GripVertical, Sparkles } from 'lucide-react'
+import { Eye, Save, FileDown, Plus, Trash2, GripVertical, Sparkles, Camera } from 'lucide-react'
 import { Button } from '../components/common/Button'
 import { EditorNav } from '../components/editor/EditorNav'
 import { Field } from '../components/editor/Field'
+import { SortableSkills } from '../components/editor/SortableSkills'
 import { AiSidePanel } from '../components/ai/AiSidePanel'
 import { AiRewriteModal } from '../components/ai/AiRewriteModal'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { ResumeDocument } from '../components/resume/ResumeDocument'
+import { Preview } from './Preview'
 import { useResumeStore } from '../store/resumeStore'
-import type { ResumeWork, ResumeProject, ResumeEducation, ResumeSkill } from '../types'
+import type { ResumeWork, ResumeProject, ResumeEducation } from '../types'
 import { exportPdf, downloadFile } from '../api/export'
 
 export function Editor() {
@@ -24,6 +26,7 @@ export function Editor() {
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<{ type: string; id: string } | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
 
   const { id } = useParams<{ id?: string }>()
 
@@ -66,6 +69,13 @@ export function Editor() {
       showToast('error', '简历保存失败')
     }
     setIsSaving(false)
+  }
+
+  const handlePreview = () => {
+    // 使用 setTimeout 确保所有组件完全卸载后再切换到预览模式
+    setTimeout(() => {
+      setPreviewMode(true)
+    }, 0)
   }
 
   const handleExport = async () => {
@@ -170,12 +180,37 @@ export function Editor() {
                 </Field>
               </div>
               <div className="flex flex-col items-center gap-3">
-                <div className="w-[92px] h-[112px] flex items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-extrabold text-[28px]">
-                  {currentResumeData.basics.name?.charAt(0) || '张'}
+                <div className="w-[92px] h-[112px] flex items-center justify-center rounded-xl bg-blue-100 text-blue-700 font-extrabold text-[28px] relative overflow-hidden">
+                  {currentResumeData.basics.avatar ? (
+                    <img 
+                      src={currentResumeData.basics.avatar} 
+                      alt="avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    currentResumeData.basics.name?.charAt(0) || '张'
+                  )}
                 </div>
-                <button className="h-8.5 px-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors">
+                <label className="h-8.5 px-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 text-xs font-medium hover:bg-blue-100 transition-colors cursor-pointer flex items-center gap-1.5">
+                  <Camera size={12} />
                   更换照片
-                </button>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onload = (event) => {
+                          updateBasics({ avatar: event.target?.result as string })
+                          showToast('success', '头像上传成功')
+                        }
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                  />
+                </label>
               </div>
             </div>
             <Field label="手机">
@@ -549,39 +584,11 @@ export function Editor() {
         return (
           <>
             <h2 className="text-lg font-bold text-slate-900 mb-4.5">技能特长</h2>
-            <div className="space-y-4">
-              {skills.map((skill: ResumeSkill, skillIndex: number) => (
-                <div key={skillIndex} className="border border-slate-200 rounded-lg p-4 bg-white">
-                  <Field label="技能分类">
-                    <input
-                      className="h-10 px-3 border border-slate-200 rounded-lg bg-white text-slate-900 outline-none"
-                      value={skill.category}
-                      onChange={(e) => {
-                        const newSkills = [...skills]
-                        newSkills[skillIndex] = { ...newSkills[skillIndex], category: e.target.value }
-                        updateSkills(newSkills)
-                      }}
-                    />
-                  </Field>
-                  <Field label="技能列表">
-                    <textarea
-                      className="min-h-[112px] p-3 border border-slate-200 rounded-lg bg-white text-slate-900 outline-none resize-y leading-[1.65]"
-                      placeholder="每行一个技能，支持多条"
-                      value={skill.items.join('\n')}
-                      onChange={(e) => {
-                        const newSkills = [...skills]
-                        newSkills[skillIndex] = { ...newSkills[skillIndex], items: e.target.value.split('\n').filter(Boolean) }
-                        updateSkills(newSkills)
-                      }}
-                    />
-                  </Field>
-                </div>
-              ))}
-              <Button onClick={() => updateSkills([...skills, { category: '', items: [] }])} variant="secondary" size="small">
-                <Plus size={16} />
-                添加技能分类
-              </Button>
-            </div>
+            <SortableSkills 
+              skills={skills} 
+              onSkillsChange={updateSkills}
+              onToast={showToast}
+            />
           </>
         )
 
@@ -610,6 +617,18 @@ export function Editor() {
     }
   }
 
+  // 如果是预览模式，返回预览界面
+  if (previewMode) {
+    return (
+      <Preview
+        onBack={() => setPreviewMode(false)}
+        isExporting={isExporting}
+        setIsExporting={setIsExporting}
+      />
+    )
+  }
+
+  // 编辑模式
   return (
     <div className="min-h-screen grid grid-rows-[64px_1fr]">
       <header className="flex items-center justify-between px-6 border-b border-slate-200 bg-white">
@@ -618,7 +637,7 @@ export function Editor() {
           <span className="text-slate-400 text-xs">最近保存 {new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div className="flex items-center gap-2.5">
-          <Button variant="secondary" size="small">
+          <Button variant="secondary" size="small" onClick={handlePreview}>
             <Eye size={16} />
             预览
           </Button>

@@ -32,11 +32,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="relative h-[375px] flex items-center justify-center overflow-hidden" aria-hidden="true">
+        <div className="relative h-[250px] flex items-center justify-center overflow-hidden" aria-hidden="true">
           <img 
             src={heroImage} 
             alt="hero" 
-            className="w-full h-full object-contain scale-[1.5]"
+            className="w-full h-full object-contain scale-[0.8]"
           />
         </div>
       </section>

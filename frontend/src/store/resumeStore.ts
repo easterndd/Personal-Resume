@@ -386,11 +386,13 @@ export const useResumeStore = create<ResumeStore>()(
         set({ loading: true })
         try {
           const apiResume = await apiGetResume(id)
-          set({
-            currentResumeId: id,
-            currentResumeData: apiResume.resume_data as ResumeData,
-            currentTemplate: apiResume.template_id,
-          })
+          if (apiResume) {
+            set({
+              currentResumeId: id,
+              currentResumeData: apiResume.resume_data as ResumeData,
+              currentTemplate: apiResume.template_id,
+            })
+          }
         } catch (error) {
           console.error('Failed to load resume:', error)
         } finally {
