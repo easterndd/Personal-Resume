@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
-import { Plus, Upload, FileText, Sparkles, ChevronRight } from 'lucide-react'
+import { Plus, Upload, ChevronRight } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { ResumeCardItem } from '../components/resume/ResumeCardItem'
 import { useResumeStore } from '../store/resumeStore'
+import heroImage from '../assets/hero.png'
 
 export function Dashboard() {
   const { resumes, loadResumes } = useResumeStore()
@@ -31,21 +32,12 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="relative h-[250px]" aria-hidden="true">
-          <div className="absolute right-[68px] top-[38px] w-[176px] h-[160px] p-[28px_24px] rounded-[18px] bg-white/90 shadow-[0_24px_60px_rgba(37,99,235,0.16)] transform rotate-2 box-border">
-            <div className="w-[36px] h-[36px] mb-3.5 rounded-lg bg-blue-100" />
-            <span className="block h-2.25 mb-3 rounded-full bg-blue-100" />
-            <span className="block h-2.25 mb-3 rounded-full bg-blue-100" />
-            <span className="block h-2.25 mb-3 rounded-full bg-blue-100 w-[70%]" />
-            <b className="block w-[82px] h-4 mt-4 rounded-full bg-blue-500" />
-          </div>
-          <div className="absolute right-1 top-[80px] w-[72px] h-[132px] rounded-[18px] bg-[#5a91ff] transform rotate-7" />
-          <div className="absolute right-[260px] top-[46px] w-[54px] h-[54px] rounded-full bg-white text-blue-500 shadow-[0_18px_40px_rgba(37,99,235,0.12)] flex items-center justify-center z-10">
-            <FileText size={22} />
-          </div>
-          <div className="absolute right-[285px] top-[148px] w-[54px] h-[54px] rounded-full bg-white text-blue-500 shadow-[0_18px_40px_rgba(37,99,235,0.12)] flex items-center justify-center z-10">
-            <Sparkles size={22} />
-          </div>
+        <div className="relative h-[375px] flex items-center justify-center overflow-hidden" aria-hidden="true">
+          <img 
+            src={heroImage} 
+            alt="hero" 
+            className="w-full h-full object-contain scale-[1.5]"
+          />
         </div>
       </section>
 
