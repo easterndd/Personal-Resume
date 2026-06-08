@@ -40,3 +40,21 @@ async def optimize_section(section: str, content: str, target_position: str = ""
         return {"result": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/quantify")
+async def quantify_text(text: str):
+    try:
+        result = await ai_service.quantify(text)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/translate")
+async def translate_text(text: str, target_language: str = "en"):
+    try:
+        result = await ai_service.translate(text, target_language)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

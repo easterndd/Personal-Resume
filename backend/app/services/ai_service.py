@@ -218,5 +218,63 @@ class AiService:
         result = await self.chat(messages)
         return result
 
+    async def quantify(self, text: str) -> str:
+        prompt = f"""你是简历量化专家。请分析以下经历内容，找出可以量化的部分，并给出量化建议。
+
+原始内容：
+{text}
+
+要求：
+1. 不编造数据，只给出可以补充数字的方向。
+2. 指出哪些动词或成果可以量化。
+3. 给出具体的量化建议格式。
+4. 如果原文已经有数据，指出可以进一步细化的方向。
+
+返回 JSON：
+{{
+  "suggestions": [
+    {{
+      "original": "原文中的描述",
+      "quantifiable": true/false,
+      "suggestion": "量化建议",
+      "example": "示例表达"
+    }}
+  ],
+  "tips": ["量化技巧提示"]
+}}"""
+
+        messages = [{"role": "user", "content": prompt}]
+        result = await self.chat(messages)
+        return result
+
+    async def translate(self, text: str, target_language: str = "en") -> str:
+        languages = {
+            "en": "英语",
+            "zh": "中文",
+        }
+        target_lang_name = languages.get(target_language, "英语")
+
+        prompt = f"""你是专业翻译专家。请将以下简历内容翻译成{target_lang_name}。
+
+原文：
+{text}
+
+要求：
+1. 保持专业术语准确。
+2. 保持简历格式和结构。
+3. 确保语法正确、表达地道。
+4. 对于工作经历和项目描述，保持专业且简洁。
+5. 不要添加额外内容。
+
+返回 JSON：
+{{
+  "translated": "翻译后的内容",
+  "language": "{target_language}"
+}}"""
+
+        messages = [{"role": "user", "content": prompt}]
+        result = await self.chat(messages)
+        return result
+
 
 ai_service = AiService()
